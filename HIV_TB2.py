@@ -23,6 +23,7 @@ import pandas as pd
 run_time = 200
 
 # Define transmission parameters
+alpha = 0.11
 BetaGen_rate = 0.2275  # General Transmission rate
 BetaHosp_rate = 0.4269  # Transmission rate during Hospitalization
 BetaFuneral_rate = 0.0445  # Transmission rate during funeral
@@ -103,11 +104,12 @@ for j in range(run_time):
         # Balance populations...
         # Calculate difference equations...
         # Calculate Susceptibles at time t+1
-        S_GU[0, j] = S_GU[0, i] - (((BetaGen_rate * S_GU[0, i] * I_GU[0, i]) + (
-                    BetaHosp_rate * S_GU[0, i] * H_GU[0, i]) + (BetaFuneral_rate * S_GU[0, i] * F_GU[0, i])) / N_GU[
-                                       0, i])
-        # Calculate Vaccinated Population at time t+1
-        V_GU[0, j] = V_GU[0, i] + ((Vac_rate * S_GU[0, i]) - ((
+        S_N[0, j] = S_N[0, i] - (((alpha  * I_GU[0, i]) + (
+                lamdaTreat * S_N[0, i]) + (lamdaHosp * S_N[0, i]) - NatDeathR
+                                     0, i])
+
+        # Calculate Active Infected TB at time t+1
+        TI[0, j] = TI[0, i] - InfecRate1* ((Vac_rate * S_GU[0, i]) - ((
                     ((BetaGen_rate * I_GU[0, i]) + (BetaHosp_rate * H_GU[0, i]) + (BetaFuneral_rate * F_GU[0, i])) * (
                         VacEffic * S_GU[0, i] * V_GU[0, i]))) / N_GU[0, i])
         # Calculate Infected at time t+1
