@@ -28,11 +28,21 @@ alpha = 714
 Beta1 = 4.3  # General Transmission rate
 Beta2 = 0.051  # HIV Transmission rate, 0.055, 0.08
 enn = 1.02
-NatDeathRate = 1/70
-Tee2 = Tee3 = 2 #TreatRate for Individuals with Active TB 2 yr-1
+NatDeathRate =  1/70
+Tee2 = Tee3 = 2 #TreatRate for Individuals with ActiveTB 2 yr-1 Tee3 -TBTreatRateForCoInfect
 ActiveDeathRate = 1/8 #yr
 Delta =1.03
 TransmitRateRecovTB = 0.9 #Beta11
+Pee1 = 0.1 #HIVtoAIDSRate1
+Pee2 = 0.25 # 0.25yr-1 AIDSProgressionRateforCoinfect
+Pee3 = 0.125 #0.125yr-1 AIDSProgressionRateforReinfect, after recovCoinfect
+mew = 1.07 #TBInfectRateForHI
+Alpha1 = Alpha2 = 0.33 #HIV Treatment rate for AIDS stage
+dA= 0.3 # AIDSDeathRate 0.3 Death rate for AIDS stage dA
+dT =  1/8# dT TBDeathRateforCoinfect
+dTA = 0.33 #0.33yr-1 AidsTBDeathRate
+Beta22 = 1.1 #ReinfectRateCoinfect
+
 
 BetaHosp_rate = 0.4269  # Transmission rate during Hospitalization
 BetaFuneral_rate = 0.0445  # Transmission rate during funeral
@@ -117,6 +127,7 @@ for j in range(run_time):
         # Balance populations...
         # Calculate difference equations...
         # Calculate Susceptibles at time t+1
+
         S_N[0, j] = S_N[0, i] - ((alpha - lamdaTB * S_N[0, i]) -(lamdaHIV * S_N[0, i]) - (NatDeathRate*S_N[0, i]))
 
         # Calculate Active Infected TB at time t+1
@@ -126,27 +137,26 @@ for j in range(run_time):
         TR[0, j] = TR[0, i] + (Tee2 *TI[0, i] )-((TransmitRateRecovTB*lamdaTB) +lamdaHIV+NatDeathRate)*TR[0,i]
 
 
-
         # Calculate HIV Infected  Individuals (With No AIDS)at time t+1
-        HI[0, j] = HI[0, i] + (lamdaHIV * S_N[0, i]) - (( HIVtoAIDSRate1 + TBInfectRateForHI +NatDeathRate)* HI[0, i] +
-                                                        (AIDSTreatRate*AT[0, i]) +(lamdaHIV*TR[0, i])
+        HI[0, j] = HI[0, i] + (lamdaHIV * S_N[0, i]) - (( Pee1 + (mew*lamdaTB) +NatDeathRate)* HI[0, i] +
+                                                        (Alpha1*AT[0, i]) +(lamdaHIV*TR[0, i]))
 
 
         # Calculate HIV Infected  Individuals (With  AIDS)t at time t+1
-        A[0, j] = A[0, i] + ((HIVtoAIDSRate1*HI[0, i]) -(AIDSTreatRate*A[0, i])-(NatDeathRate+AIDSDeathRate)*A[0, i])
+        A[0, j] = A[0, i] + ((Pee1*HI[0, i]) -(Alpha1*A[0, i])-(NatDeathRate + dA)*A[0, i])
 
         # Calculate Coinfected Individuals (Pre-AIDS) at time t+1
-        THI [0, j] = THI[0, i] + (((HIVInfectRateforActiveTB * TI[0, i])+ (TBInfectRateForHI*HI[0, i] + Alpha2*AT[0, i]
-                                                                           -(Tee3 +  Pee2+ NatDeathRate + TBDeathRateforCoinfect)*THI[0, i]
+        THI [0, j] = THI[0, i] + (Delta * lamdaHIV * TI[0, i]) + (mew * lamdaTB*HI[0, i]) + (Alpha2*AT[0, i]) \
+                     -((Tee3 +  Pee2+ NatDeathRate + dT)*THI[0, i])
 
         # Calculate TB_recovered Individuals (Co-infected, Pre-AIDS) at time t+1
-        RTH[0, j] = RTH[0, i] + ((TBTreatRateForCoInfect *THI[0, i]) +(ReinfectRateCoinfect*lamdaTB + Pee3 + NatDeathRate)*RTH[0, i]
-
+        RTH[0, j] = RTH[0, i] + (( Tee3 *THI[0, i]) -((Beta22*lamdaTB + Pee3 + NatDeathRate)*RTH[0, i]))
 
 
         # Calculate HIV-infected Individuals (Co-infected, AIDS) at time t+1
-        AT[0, j] = AT[0, i] + ((Pee2 * THI[0, i]) + (Pee3*RTH[0, i])- ((Alpha2 + NatDeathRate +AidsTBDeathRate ) * AT[0, i])
-                                   # Print which iteration we've run
+        AT[0, j] = AT[0, i] + ((Pee2 * THI[0, i]) + (Pee3*RTH[0, i])- ((Alpha2 + NatDeathRate + dTA) * AT[0, i]))
+
+        # Print which iteration we've run
         print('Iteration %i completed' % j)
 
         # ---------- end-else ---------------#
