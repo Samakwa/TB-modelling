@@ -23,8 +23,17 @@ import pandas as pd
 run_time = 200
 
 # Define transmission parameters
-alpha = 0.11
-BetaGen_rate = 0.2275  # General Transmission rate
+alpha = 714
+
+Beta1 = 4.3  # General Transmission rate
+Beta2 = 0.051  # HIV Transmission rate, 0.055, 0.08
+enn = 1.02
+NatDeathRate = 1/70
+Tee2 = Tee3 = 2 #TreatRate for Individuals with Active TB 2 yr-1
+ActiveDeathRate = 1/8 #yr
+Delta =1.03
+TransmitRateRecovTB = 0.9 #Beta11
+
 BetaHosp_rate = 0.4269  # Transmission rate during Hospitalization
 BetaFuneral_rate = 0.0445  # Transmission rate during funeral
 Vac_rate = 0.005  # Vaccination rate. Varies; 0, 0.005 and 0.01
@@ -41,7 +50,7 @@ GammaFuneral = 0.3072  # Traditional Funeral Duration, 1/GammaF = 3.255
 R0V_GU = 1.52  # Initial Reproduction number for Guinea
 
 # Set the initial number of people in the model
-N_GU_0 = 11745189  # Total Population
+N = 11745189  # Total Population
 # N_SL_0      = 6092075   # To be used for cross-country modeling
 # N_LI_0      = 4294077
 
@@ -55,14 +64,18 @@ R_GU_0 = 0.01  # Initial proportion of Recovered
 V_GU_0 = 0.00  # Initial proportion of Vaccinated
 
 # Pre allocate vectors for model variables...
-N_GU = zeros((1, run_time))
-S_GU = zeros((1, run_time))
-V_GU = zeros((1, run_time))
-I_GU = zeros((1, run_time))
-H_GU = zeros((1, run_time))
-F_GU = zeros((1, run_time))
-R_GU = zeros((1, run_time))
-R0V_GU = zeros((1, run_time))
+S_N = zeros((1, run_time))
+TI = zeros((1, run_time))
+TR = zeros((1, run_time))
+HI= zeros((1, run_time))
+A = zeros((1, run_time))
+THI = zeros((1, run_time))
+THR = zeros((1, run_time))
+AT = zeros((1, run_time))
+RTH = zeros((1, run_time))
+
+lamdaTB = (Beta1 *(TI + THI + AT))/N
+lamdaHIV = (Beta2 *(HI+ THI + AT + RTH + (enn *(A+AT))))/N
 
 # Print which iteration we've run
 print('Running model...')
@@ -104,32 +117,36 @@ for j in range(run_time):
         # Balance populations...
         # Calculate difference equations...
         # Calculate Susceptibles at time t+1
-        S_N[0, j] = S_N[0, i] - (((alpha  * I_GU[0, i]) + (
-                lamdaTreat * S_N[0, i]) + (lamdaHosp * S_N[0, i]) - NatDeathR
-                                     0, i])
+        S_N[0, j] = S_N[0, i] - ((alpha - lamdaTB * S_N[0, i]) -(lamdaHIV * S_N[0, i]) - (NatDeathRate*S_N[0, i]))
 
         # Calculate Active Infected TB at time t+1
-        TI[0, j] = TI[0, i] - InfecRate1* ((Vac_rate * S_GU[0, i]) - ((
-                    ((BetaGen_rate * I_GU[0, i]) + (BetaHosp_rate * H_GU[0, i]) + (BetaFuneral_rate * F_GU[0, i])) * (
-                        VacEffic * S_GU[0, i] * V_GU[0, i]))) / N_GU[0, i])
-        # Calculate Infected at time t+1
-        I_GU[0, j] = I_GU[0, i] + ((GammaHosp * Theta1 + (GammaInfected * (1 - Theta1) * (1 - Delta1)) + (
-                    GammaDeath * (1 - Theta1) * Delta1)) * I_GU[0, i])
-        # Calculate Number of Hospitalized Individuals at time t+1
-        H_GU[0, j] = H_GU[0, i] + (
-                    (GammaHosp * Theta1 * I_GU[0, i]) - ((GammaDeathHosp * Delta2) + (GammaInfecHosp * (1 - Delta2))) *
-                    H_GU[0, i])
-        # Calculate Number of Individuals on Funeral_Waiting List at time t+1
-        F_GU[0, j] = F_GU[0, i] + (
-                    (GammaDeath * (1 - Theta1) * Delta1 * I_GU[0, i]) + (GammaDeathHosp * Delta2 * H_GU[0, i]) - (
-                        GammaFuneral * F_GU[0, i]))
-        # Calculate Number of Recovered Individuals at time t+1
-        R_GU[0, j] = R_GU[0, i] + (((GammaInfected * (1 - Theta1) * (1 - Delta1)) * I_GU[0, i]) + (
-                    GammaDeathHosp * (1 - Delta2) * H_GU[0, i]) - (GammaFuneral * F_GU[0, i]))
-        # Calculate Basic Reproduction Number, R0, When Vaccination is Introduced
-        R0V_GU[0, j] = R0V_GU[0, i] + (Vac_rate * R0V_GU[0, i])
+        TI[0, j] = TI[0, i] - ((Tee2 + ActiveDeathRate + NatDeathRate + (Delta*lamdaHIV))*TI[0,i])
 
-        # Print which iteration we've run
+        # Calculate Recovered at time t+1
+        TR[0, j] = TR[0, i] + (Tee2 *TI[0, i] )-((TransmitRateRecovTB*lamdaTB) +lamdaHIV+NatDeathRate)*TR[0,i]
+
+
+
+        # Calculate HIV Infected  Individuals (With No AIDS)at time t+1
+        HI[0, j] = HI[0, i] + (lamdaHIV * S_N[0, i]) - (( HIVtoAIDSRate1 + TBInfectRateForHI +NatDeathRate)* HI[0, i] +
+                                                        (AIDSTreatRate*AT[0, i]) +(lamdaHIV*TR[0, i])
+
+
+        # Calculate HIV Infected  Individuals (With  AIDS)t at time t+1
+        A[0, j] = A[0, i] + ((HIVtoAIDSRate1*HI[0, i]) -(AIDSTreatRate*A[0, i])-(NatDeathRate+AIDSDeathRate)*A[0, i])
+
+        # Calculate Coinfected Individuals (Pre-AIDS) at time t+1
+        THI [0, j] = THI[0, i] + (((HIVInfectRateforActiveTB * TI[0, i])+ (TBInfectRateForHI*HI[0, i] + Alpha2*AT[0, i]
+                                                                           -(Tee3 +  Pee2+ NatDeathRate + TBDeathRateforCoinfect)*THI[0, i]
+
+        # Calculate TB_recovered Individuals (Co-infected, Pre-AIDS) at time t+1
+        RTH[0, j] = RTH[0, i] + ((TBTreatRateForCoInfect *THI[0, i]) +(ReinfectRateCoinfect*lamdaTB + Pee3 + NatDeathRate)*RTH[0, i]
+
+
+
+        # Calculate HIV-infected Individuals (Co-infected, AIDS) at time t+1
+        AT[0, j] = AT[0, i] + ((Pee2 * THI[0, i]) + (Pee3*RTH[0, i])- ((Alpha2 + NatDeathRate +AidsTBDeathRate ) * AT[0, i])
+                                   # Print which iteration we've run
         print('Iteration %i completed' % j)
 
         # ---------- end-else ---------------#
