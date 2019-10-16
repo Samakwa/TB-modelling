@@ -1,13 +1,8 @@
 '''
-A program to model treatment options of HIV/TB Coinfection and Estimate the Geopatial Allocation of Resources Among West African Countries,
-
-First Part is with Guinea
-
+A program to model treatment options of HIV/TB Coinfection and Estimate the Geospatial Allocation of Resources Among West African Countries,
 Created by Sampson Akwafuo
-Oct 2017
+Oct 2019
 
-Edited by: Sultanah Alshammari
-Edited by:
 '''
 
 # Import zeros function
@@ -44,36 +39,27 @@ dTA = 0.33 #0.33yr-1 AidsTBDeathRate
 Beta22 = 1.1 #ReinfectRateCoinfect
 
 
-BetaHosp_rate = 0.4269  # Transmission rate during Hospitalization
-BetaFuneral_rate = 0.0445  # Transmission rate during funeral
-Vac_rate = 0.005  # Vaccination rate. Varies; 0, 0.005 and 0.01
-VacEffic = 0.5487  # Efficacy of Vaccination
-GammaHosp = 0.309  # Time lag before Hospitalization 1/GammaHosp = 3.24 days
-Theta1 = 0.197  # Fraction of Infection Popn going to Hospital
-GammaInfected = 0.067  # Typical Infection Duration, 1/GammaInfected = 15days
-GammaDeath = 0.0963  # Time from Infection to death  1/Gammad =10.38 days
-Delta1 = 0.750  # Unhospitalized fatality rate
-GammaDeathHosp = 0.1597  # time from Hospitalization to death, 1/gammaDH = 6.26
-Delta2 = 0.6728  # Hospitalized fatality rate
-GammaInfecHosp = 0.0630  # Time from Infection to recovery, 1/GammaIH =15.88
-GammaFuneral = 0.3072  # Traditional Funeral Duration, 1/GammaF = 3.255
-R0V_GU = 1.52  # Initial Reproduction number for Guinea
+
 
 # Set the initial number of people in the model
-N = 11745189  # Total Population
+N_0 = 101558800  # Total Population of 15-65 in Nigeria= 101558800
 # N_SL_0      = 6092075   # To be used for cross-country modeling
 # N_LI_0      = 4294077
 
 
 # Set the initial proportion of the sub-groups
-S_GU_0 = 0.84  # Initial proportion of Susceptible
-I_GU_0 = 0.09  # Initial proportion of Infected
-H_GU_0 = 0.04  # Initial proportion of Hospitlaized
-F_GU_0 = 0.02  # Initial proportion of Funeral Wait
-R_GU_0 = 0.01  # Initial proportion of Recovered
-V_GU_0 = 0.00  # Initial proportion of Vaccinated
+S_N_0 = 0.84  # Initial proportion of Susceptible
+TI_0 = 0.09  # Initial proportion of TB-Infected
+TR_0 = 0.04  # Initial proportion of TB_Recovered
+HI_0 = 0.02  # Initial proportion of HIV_Infected, No AIDS
+A_0 = 0.01  # Initial proportion of AIDS individuals
+THI_0 = 0.00  # Initial proportion of Co-infected
+THR_0 = 0.00  # Initial proportion of Co-infected, TB_Recovered
+AT_0 = 0.00  # Initial proportion of Co-infected, Active TB and AIDS Symptoms
+
 
 # Pre allocate vectors for model variables...
+N_Tot = zeros((1, run_time))
 S_N = zeros((1, run_time))
 TI = zeros((1, run_time))
 TR = zeros((1, run_time))
@@ -82,10 +68,10 @@ A = zeros((1, run_time))
 THI = zeros((1, run_time))
 THR = zeros((1, run_time))
 AT = zeros((1, run_time))
-RTH = zeros((1, run_time))
+#RTH = zeros((1, run_time))
 
-lamdaTB = (Beta1 *(TI + THI + AT))/N
-lamdaHIV = (Beta2 *(HI+ THI + AT + RTH + (enn *(A+AT))))/N
+lamdaTB = (Beta1 *(TI + THI + AT))/N_0
+lamdaHIV = (Beta2 *(HI+ THI + AT + THR + (enn *(A+AT))))/N_0
 
 # Print which iteration we've run
 print('Running model...')
@@ -93,7 +79,7 @@ print('Running model...')
 openfile = open("HIV_TB_Modeling_Results.csv", "w")
 excelwriter = csv.writer(openfile)
 # Write the first row of the output file (a column for each population group)
-# excelwriter.writerow(["Time", "Susceptible_GU", "Vaccinated_GU", "Infected_GU", "Hospitalized_GU", "FuneralWait_GU", "Recovered_GU"])
+# excelwriter.writerow(["Time", "Susceptible_Popn", "Active TB", "TB_Recovered", "HIV_Only", "AIDS_Symptoms", "Coinfected_No_AIDS", "Coinfected_AIDSnTB"])
 
 # This loop simulates the model
 for j in range(run_time):
@@ -102,23 +88,24 @@ for j in range(run_time):
     if j == 0:
         # Define initial conditions...
         # Total people in each population group
-        N_GU[0, j] = N_GU_0
-        # Susceptibles in each country
-        S_GU[0, j] = N_GU_0
+        #S_N[0, j] = S_N_0
+
         # Susceptibles
-        S_GU[0, j] = N_GU_0 * S_GU_0
-        # Infected
-        I_GU[0, j] = N_GU_0 * I_GU_0
+        S_N[0, j] = N_0 * S_N_0
+        # TB_Infected
+        TI[0, j] = N_0 * TI_0
         # Hospitalized
-        H_GU[0, j] = N_GU_0 * H_GU_0
+        TR[0, j] = N_0 * TR_0
         # Funeral Wait List
-        F_GU[0, j] = N_GU_0 * F_GU_0
+        HI[0, j] = N_0 * HI_0
         # Recovered
-        R_GU[0, j] = N_GU_0 * R_GU_0
+        A[0, j] = N_0 * A_0
         # Vaccinated
-        V_GU[0, j] = N_GU_0 * V_GU_0
+        THI[0, j] = N_0 * THI_0
+        THR[0, j] = N_0 * THR_0
+        AT[0, j] = N_0 * AT_0
         # Write a new row for the initial conditions (same format as title row)
-        excelwriter.writerow([2017 + j, S_GU[0, j], V_GU[0, j], I_GU[0, j], H_GU[0, j], F_GU[0, j], R_GU[0, j]])
+        excelwriter.writerow([2019 + j, S_N[0, j], TI[0, j], TR[0, j], HI[0, j], A[0, j], THI[0, j], THR[0, j], AT[0, j]])
         # ---------- end-if ---------------#
     # On any other iteraction do this part
     else:
@@ -150,11 +137,11 @@ for j in range(run_time):
                      -((Tee3 +  Pee2+ NatDeathRate + dT)*THI[0, i])
 
         # Calculate TB_recovered Individuals (Co-infected, Pre-AIDS) at time t+1
-        RTH[0, j] = RTH[0, i] + (( Tee3 *THI[0, i]) -((Beta22*lamdaTB + Pee3 + NatDeathRate)*RTH[0, i]))
+        THR[0, j] = THR[0, i] + (( Tee3 *THI[0, i]) -((Beta22*lamdaTB + Pee3 + NatDeathRate)*THR[0, i]))
 
 
         # Calculate HIV-infected Individuals (Co-infected, AIDS) at time t+1
-        AT[0, j] = AT[0, i] + ((Pee2 * THI[0, i]) + (Pee3*RTH[0, i])- ((Alpha2 + NatDeathRate + dTA) * AT[0, i]))
+        AT[0, j] = AT[0, i] + ((Pee2 * THI[0, i]) + (Pee3*THR[0, i])- ((Alpha2 + NatDeathRate + dTA) * AT[0, i]))
 
         # Print which iteration we've run
         print('Iteration %i completed' % j)
@@ -162,10 +149,10 @@ for j in range(run_time):
         # ---------- end-else ---------------#
 
     # Determine population size
-    N_GU[0, j] = S_GU[0, j] + V_GU[0, j] + I_GU[0, j] + H_GU[0, j] + F_GU[0, j] + R_GU[0, j]
+    N_Tot[0, j] = S_N[0, j]+ TI[0, j]+ TR[0, j]+ HI[0, j]+ A[0, j]+ THI[0, j]+ THR[0, j]+ AT[0, j]
 
     # Write a new row on each iteration
-    excelwriter.writerow([2020 + j, S_GU[0, j], V_GU[0, j], I_GU[0, j], H_GU[0, j], F_GU[0, j], R_GU[0, j]])
+    excelwriter.writerow([2020 + j, S_N[0, j], TI[0, j], TR[0, j], HI[0, j], A[0, j], THI[0, j], THR[0, j], AT[0, j]])
 # ---------- end-loop ---------------#
 
 # Print which iteration we've run
